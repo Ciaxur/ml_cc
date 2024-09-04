@@ -2,3 +2,4 @@
 *.o
 app
 compile_commands.*
+imgui.ini
