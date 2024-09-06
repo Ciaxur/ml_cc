@@ -1,14 +1,37 @@
-#include <implot.h>
+#include <GL/gl.h>
+#include <GLFW/glfw3.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
-#include <GL/gl.h>
+#include <chrono>
 #include <fmt/core.h>
+#include <functional>
 #include <imgui.h>
+#include <implot.h>
 #include <spdlog/spdlog.h>
-#include <GLFW/glfw3.h>
+#include <thread>
 #include <vector>
 
 #include "includes/plotting.h"
+
+void do_ml_stuff(bool& should_close, ImPlotData& implot_data) {
+  // Insert initial empty set of data.
+  implot_data.bars.emplace_back("Bar Data");
+  implot_data.lines.emplace_back("Line Data");
+  implot_data.points.emplace_back("Point Data");
+
+  // Grab a reference to the data arrays for dynamic mutation.
+  ImPlotData::ScatterData& points = implot_data.points.back();
+  points.data.resize(100);
+
+  // Mutate the data plots.
+  while (!should_close) {
+    std::this_thread::sleep_for( std::chrono::milliseconds(1) );
+
+    for (size_t i = 0; i < 100; i++) {
+      points.data[i] = implot_data.rand_double() * 10;
+    }
+  }
+}
 
 int main() {
   // Initialize GLFW
@@ -49,27 +72,8 @@ int main() {
 
   // Create shared data struct to be passed into ImPlot.
   ImPlotData implot_data;
-
-  // TEST: some test data.
-  std::vector<double> x_data;
-  std::vector<double> y_data;
-  std::vector<double> bar_data;
-  std::vector<double> scatter_data;
-
-  // Randomize data.
-  for (size_t i =0; i < 11; i++) {
-    bar_data.push_back( implot_data.rand_double() * 10 );
-    scatter_data.push_back( implot_data.rand_double() * 10 );
-  }
-  for (size_t i =0; i < 1000; i++) {
-    x_data.push_back( i / 1000.0 * 9.0 );
-    y_data.push_back( i / 1000.0 * 9.0 );
-  }
-
-  // Insert generated data into shared implot struct to be drawn.
-  implot_data.bars.emplace_back("Bar Data", std::move(bar_data));
-  implot_data.lines.emplace_back("Line Data", std::move(x_data), std::move(y_data), x_data.size());
-  implot_data.points.emplace_back("Point Data", std::move(scatter_data));
+  bool ml_worker_thread_should_close = false;
+  std::thread ml_worker_thread( do_ml_stuff, std::ref(ml_worker_thread_should_close), std::ref(implot_data) );
 
   // Now we begin doing important stuff!
   // we now.. enter the draw loop!
@@ -81,10 +85,8 @@ int main() {
       continue;
     }
 
-
     // Draw stuff.
-    draw_implot("1st plot", implot_data);
-
+    draw_implot("model plot", implot_data);
 
     // Actually draw ImGui
     int display_w, display_h;
@@ -96,6 +98,11 @@ int main() {
 
     glfwSwapBuffers(window);
   }
+
+  // Terminate worker thread
+  spdlog::info("Waiting on worker thread to terminate...");
+  ml_worker_thread_should_close = true;
+  ml_worker_thread.join();
 
   // Clean up.
   spdlog::info("Cleaning up...");
