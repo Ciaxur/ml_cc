@@ -8,8 +8,8 @@ INCLUDES := $(patsubst %,-I%, \
 	./vendors/spdlog/include \
 	./vendors/imgui \
 	./vendors/implot \
-	./src/includes/ \
-	$(wildcard ./src/includes/**/) \
+	./ \
+	$(wildcard ./**/) \
 )
 
 # ImGUI backend source paths
