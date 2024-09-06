@@ -24,18 +24,27 @@ struct ImPlotData {
 
   // Data types.
   struct BarsData {
+    const char* name;
     std::vector<double> data;
   };
 
   struct LineData {
+    const char* name;
     std::vector<double> x_data;
     std::vector<double> y_data;
     size_t size;
   };
 
+  struct ScatterData {
+    const char* name;
+    std::vector<double> data;
+  };
+
+
   // Data to draw.
   std::vector<BarsData> bars;
   std::vector<LineData> lines;
+  std::vector<ScatterData> points;
 
   // Helper function for generating a random floating point number.
   double rand_double() {
@@ -53,7 +62,7 @@ void inline ImGui_FullScreenNextWindow() {
   ImGui::SetNextWindowPos(ImVec2(0, 0));
 }
 
-void draw_implot(ImPlotData& implot_data) {
+void draw_implot(const char* plot_name, ImPlotData& implot_data) {
   ImGuiIO& io = ImGui::GetIO();
 
   ImGui_NewFrame();
@@ -63,38 +72,55 @@ void draw_implot(ImPlotData& implot_data) {
 
   // Define ImGui stuff
   ImGui::Begin(
-    "Fullscreen plot",
+    fmt::format("Fullscreen {}", plot_name).c_str(),
     nullptr,
     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoMove |
     ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize
   );
 
   ImPlot::BeginPlot(
-    "First plot",
+    plot_name,
     io.DisplaySize,
     ImPlotFlags_::ImPlotFlags_NoTitle
   );
 
+  // Draw the data!
   for (size_t i = 0; i < implot_data.bars.size(); i++) {
+    const char* name           = implot_data.lines[i].name;
     const double* bar_data_ptr = implot_data.bars[i].data.data();
     const size_t bar_data_size = implot_data.bars[i].data.size();
+
     ImPlot::PlotBars(
-      fmt::format("Bar label #{}", i).c_str(),
+      name,
       bar_data_ptr,
       bar_data_size
     );
   }
 
   for (size_t i = 0; i < implot_data.lines.size(); i++) {
+    const char* name              = implot_data.lines[i].name;
     const double* line_x_data_ptr = implot_data.lines[i].x_data.data();
     const double* line_y_data_ptr = implot_data.lines[i].y_data.data();
-    const size_t line_data_size = implot_data.lines[i].size;
+    const size_t line_data_size   = implot_data.lines[i].size;
 
     ImPlot::PlotLine(
-      fmt::format("line data#{}", i).c_str(),
+      name,
       line_x_data_ptr,
       line_y_data_ptr,
       line_data_size
+    );
+  }
+
+  // Draw points on top of lines
+  for (size_t i = 0; i < implot_data.points.size(); i++) {
+    const char* name           = implot_data.points[i].name;
+    const double* point_data_ptr = implot_data.points[i].data.data();
+    const size_t point_data_size = implot_data.points[i].data.size();
+
+    ImPlot::PlotScatter(
+      name,
+      point_data_ptr,
+      point_data_size
     );
   }
 
@@ -149,10 +175,12 @@ int main() {
   std::vector<double> x_data;
   std::vector<double> y_data;
   std::vector<double> bar_data;
+  std::vector<double> scatter_data;
 
   // Randomize data.
   for (size_t i =0; i < 11; i++) {
     bar_data.push_back( implot_data.rand_double() * 10 );
+    scatter_data.push_back( implot_data.rand_double() * 10 );
   }
   for (size_t i =0; i < 1000; i++) {
     x_data.push_back( i / 1000.0 * 9.0 );
@@ -160,8 +188,9 @@ int main() {
   }
 
   // Insert generated data into shared implot struct to be drawn.
-  implot_data.bars.emplace_back(std::move(bar_data));
-  implot_data.lines.emplace_back(std::move(x_data), std::move(y_data), x_data.size());
+  implot_data.bars.emplace_back("Bar Data", std::move(bar_data));
+  implot_data.lines.emplace_back("Line Data", std::move(x_data), std::move(y_data), x_data.size());
+  implot_data.points.emplace_back("Point Data", std::move(scatter_data));
 
   // Now we begin doing important stuff!
   // we now.. enter the draw loop!
@@ -175,7 +204,7 @@ int main() {
 
 
     // Draw stuff.
-    draw_implot(implot_data);
+    draw_implot("1st plot", implot_data);
 
 
     // Actually draw ImGui
