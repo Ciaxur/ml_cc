@@ -42,7 +42,8 @@ struct ImPlotData {
   std::vector<LineData> lines;
   std::vector<ScatterData> points;
 
-  // Helper function for generating a random floating point number.
+  // Helper function for generating a random floating point number between
+  // 0.0 - 1.0.
   double rand_double() {
     return this->rand_uniform(this->rand_gen);
   }

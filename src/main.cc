@@ -3,37 +3,184 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <chrono>
-#include <fmt/core.h>
+#include <cmath>
 #include <functional>
 #include <imgui.h>
 #include <implot.h>
 #include <spdlog/spdlog.h>
+#include "spdlog/details/os.h"
 #include <thread>
-#include <vector>
 
 #include "includes/plotting.h"
+#include "includes/loss.h"
 
+// TODO: remove this hardcoding of 2.
+void forward(const double xs[][2], const double ws[], double ys[], const size_t sample_size) {
+  // TODO: Activation operation (start with sigmoid)
+  //   for now, just doing an identity. we'll improve after to learn WHY!
+  for (size_t i = 0; i < sample_size; i++) {
+    double x0 = xs[i][0];
+    double w0 = ws[0];
+    double n0 = w0 * x0;
+    ys[i] = n0;
+
+    spdlog::debug("== Input[{}] ==", i);
+    spdlog::debug("  x0 * w0 = n0");
+    spdlog::debug("  {} * {} = {}", x0, w0, n0);
+    spdlog::debug("  n0 = {:.4}\n", n0);
+  }
+}
+
+void train(const double xs[][2], double ws[], double ys[], const size_t sample_size, const double learning_rate, const size_t epoc) {
+  for (size_t j = 0; j < epoc; j++) {
+    for (size_t i = 0; i < sample_size; i++) {
+      // ky = expected output
+      // ka = actual output
+      const double ky = xs[i][1];
+      const double ka = ys[i];
+      const double dy = Loss::d_mean_square_error( ky, ka, sample_size  );
+      const double dy_lr = dy * learning_rate;
+
+      spdlog::debug("== EPOC[{}]: TRAIN[{}] ==", j, i);
+      spdlog::debug("  ky = {}", ky);
+      spdlog::debug("  ka = {}", ka);
+      spdlog::debug("  dy = {}", dy);
+      spdlog::debug("  dy * l_rate = {}\n", dy_lr);
+
+      // TODO: make this not hardcoded.
+      ws[0] += dy_lr;
+    }
+
+    // Forward through the model and evaluate the performance of the model.
+    forward(xs, ws, ys, sample_size);
+
+    // Calculate the score after each epoc.
+    double score = Loss::mean_square_error(
+      xs,
+      sample_size,
+      ys,
+      sample_size
+    );
+    spdlog::debug("epoc[{}] score: {:.4}", j, score);
+  }
+}
+
+// NOTE: phase0 is verbose. learning what's going on.
+// TODO: later.
+// WIP: Training data: Bitwise operations
+//
 void do_ml_stuff(bool& should_close, ImPlotData& implot_data) {
-  // Insert initial empty set of data.
-  implot_data.bars.emplace_back("Bar Data");
-  implot_data.lines.emplace_back("Line Data");
-  implot_data.points.emplace_back("Point Data");
+  // Knobs.
+  const double LEARNING_RATE = std::exp(-6);
+  const size_t TRAIN_EPOC = 1000;
 
+  // WIP: get something working first.
+  // This bascially should be y = 2x
+  const double TRAIN_DATA_LINEAR_OP[][2] = {
+    // Input | Result
+    {  0.0,      0.0 },
+    {  1.0,      2.0 },
+    {  2.0,      4.0 },
+    {  3.0,      6.0 },
+    {  4.0,      8.0 },
+  };
+  const size_t TRAIN_DATA_SET_SIZE = sizeof(TRAIN_DATA_LINEAR_OP) / sizeof(TRAIN_DATA_LINEAR_OP[0]);
+
+  // WIP: Neuron(s) | Neural network
+  double ws[] = {
+    // Randomly populate this neuron's weights.
+    // These weights must match each input.
+    implot_data.rand_double(),
+  };
+  spdlog::info("w = {{ {:.4} }}", ws[0]);
+  spdlog::info("learning rate = {:.4}", LEARNING_RATE);
+  spdlog::info("epoc = {:}", TRAIN_EPOC);
+
+  // Apply weighted sum operation on all training data sets
+  double ys[TRAIN_DATA_SET_SIZE] = {};
+
+  // Forward inputs through the model.
+  forward(TRAIN_DATA_LINEAR_OP, ws, ys, TRAIN_DATA_SET_SIZE);
+
+  // Evaluate score, which is using a loss function.
+  double score = Loss::mean_square_error(
+    // Evaluating training data set | expected outputs
+    TRAIN_DATA_LINEAR_OP,
+    TRAIN_DATA_SET_SIZE,
+
+    // On actual output of the model
+    ys,
+    TRAIN_DATA_SET_SIZE
+  );
+  spdlog::info("score = {:.4}", score);
+
+  // TRAIN: Adjust weights to reduce loss function.
+  train( TRAIN_DATA_LINEAR_OP, ws, ys, TRAIN_DATA_SET_SIZE, LEARNING_RATE, TRAIN_EPOC );
+
+  // EVALUATE
+  // Forward through the model and evaluate the performance of the model.
+  forward(TRAIN_DATA_LINEAR_OP, ws, ys, TRAIN_DATA_SET_SIZE);
+
+  // Calculate the score after each epoc.
+  score = Loss::mean_square_error(
+    TRAIN_DATA_LINEAR_OP,
+    TRAIN_DATA_SET_SIZE,
+    ys,
+    TRAIN_DATA_SET_SIZE
+  );
+  spdlog::info("epoc[{}] score: {:.4}", TRAIN_EPOC, score);
+
+  // TODO: graph it. then after that we can play around with activation functions.
+  // TEST:
+  return;
+
+  // Insert initial empty set of data.
+  // implot_data.bars.emplace_back("Bar Data");
+  // implot_data.lines.emplace_back("Line Data");
+  // implot_data.points.emplace_back("Point Data");
+  //
   // Grab a reference to the data arrays for dynamic mutation.
-  ImPlotData::ScatterData& points = implot_data.points.back();
-  points.data.resize(100);
+  // TODO:
+
+
+
 
   // Mutate the data plots.
   while (!should_close) {
-    std::this_thread::sleep_for( std::chrono::milliseconds(1) );
+    std::this_thread::sleep_for( std::chrono::milliseconds(50) );
+  }
+}
 
-    for (size_t i = 0; i < 100; i++) {
-      points.data[i] = implot_data.rand_double() * 10;
-    }
+void configure_loglevel() {
+  const std::string spdlog_level = spdlog::details::os::getenv("SPDLOG_LEVEL");
+
+  if (spdlog_level == "info") {
+    spdlog::set_level(spdlog::level::info);
+  }
+  else if (spdlog_level == "debug") {
+    spdlog::set_level(spdlog::level::debug);
+  }
+  else if (spdlog_level == "warn") {
+    spdlog::set_level(spdlog::level::warn);
+  }
+  else if (spdlog_level == "err") {
+    spdlog::set_level(spdlog::level::err);
+  }
+  else if (spdlog_level == "trace") {
+    spdlog::set_level(spdlog::level::trace);
   }
 }
 
 int main() {
+  configure_loglevel();
+
+  // TEST:
+  ImPlotData implot_data_1;
+  bool b = true;
+  do_ml_stuff(b, implot_data_1);
+  return 69;
+
+
   // Initialize GLFW
   glfwInit();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
