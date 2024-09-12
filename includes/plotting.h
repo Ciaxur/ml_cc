@@ -20,7 +20,7 @@ struct ImPlotData {
   std::uniform_real_distribution<double> rand_uniform;
 
   // Model metadata.
-  Model const *model = nullptr;
+  Model *model = nullptr;
 
   // Data types.
   struct BarsData {

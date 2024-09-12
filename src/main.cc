@@ -121,7 +121,7 @@ void train(const double xs[], const double expected_ys[], const size_t sample_si
 void do_ml_stuff(bool& should_close, ImPlotData& implot_data) {
   Model model{
     .learning_rate = std::exp(-6),
-    .training_epochs = 10,
+    .training_epochs = 1,
     .cost = 69,
 
     // Single neuron.

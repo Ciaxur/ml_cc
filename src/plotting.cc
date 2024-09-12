@@ -94,13 +94,25 @@ void draw_implot(const char* plot_name, ImPlotData& implot_data) {
       ImGui::SameLine();
       ImGui::Text("%f", implot_data.model->cost);
 
-      ImGui::TextColored(ImVec4(0.9f, 0.29f, 0.235f, 1.0f), "Learning Rate: ");
-      ImGui::SameLine();
-      ImGui::Text("%f", implot_data.model->learning_rate);
+      ImGui::TextColored(ImVec4(0.9f, 0.29f, 0.235f, 1.0f), "Learning Rate");
+      ImGui::InputDouble(
+        "##learning_rate",
+        &implot_data.model->learning_rate,
+        std::exp(-6),
+        0.0,
+        "%f"
+      );
 
-      ImGui::TextColored(ImVec4(0.9f, 0.29f, 0.235f, 1.0f), "Epochs: ");
-      ImGui::SameLine();
-      ImGui::Text("%zu", implot_data.model->training_epochs);
+      ImGui::TextColored(ImVec4(0.9f, 0.29f, 0.235f, 1.0f), "Epochs");
+      const size_t step = 1;
+      ImGui::InputScalar(
+        "##training_epochs",
+        ImGuiDataType_U64,
+        &implot_data.model->training_epochs,
+        &step,
+        &step,
+        "%zu"
+      );
 
       ImGui::Separator();
       ImGui::BeginChild("Weights");
