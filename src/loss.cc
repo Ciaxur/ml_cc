@@ -1,12 +1,12 @@
 #include <spdlog/spdlog.h>
 #include "includes/loss.h"
 
-double Loss::mean_square_error(const double inputs[][2], size_t input_size, const double outputs[], size_t sample_size) {
+double Loss::mean_square_error(const double expected_ys[], const double actual_ys[], size_t sample_size) {
   // Mean squared error.
   double mse = 0;
   for (size_t i = 0; i < sample_size; i++) {
-    const double expected_y = inputs[i][1];
-    const double actual_y   = outputs[i];
+    const double expected_y = expected_ys[i];
+    const double actual_y   = actual_ys[i];
 
     double distance_from_expected_result = actual_y - expected_y;
 
@@ -21,7 +21,7 @@ double Loss::mean_square_error(const double inputs[][2], size_t input_size, cons
   return mse / sample_size;
 }
 
-double Loss::d_mean_square_error(const double expected_output, const double actual_output, const size_t sample_size) {
+double Loss::d_mean_square_error(const double expected_y, const double actual_y, const size_t sample_size) {
   // Derivative of MSE.
   // lim of MSE as the output approaches 0. Which is the derivative.
   //
@@ -29,6 +29,6 @@ double Loss::d_mean_square_error(const double expected_output, const double actu
   //   for yk = expected output
   //       ya = actual output
   //       n  = sample size
-  return ( 2 * ( expected_output - actual_output ) ) / sample_size;
+  return ( 2 * ( expected_y - actual_y ) ) / sample_size;
 }
 

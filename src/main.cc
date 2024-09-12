@@ -14,12 +14,20 @@
 #include "includes/plotting.h"
 #include "includes/loss.h"
 
-// TODO: remove this hardcoding of 2.
-void forward(const double xs[][2], const double ws[], double ys[], const size_t sample_size) {
+/**
+* Forwards the given input through the model, populating outputs.
+*
+* @param xs Input array to feed throught the model.
+* @param ws Model weights.
+* @param ys Output array to populate.
+* @param sample_size Size of the input sample array.
+*/
+void forward(const double xs[], const double ws[], double ys[], const size_t sample_size) {
   // TODO: Activation operation (start with sigmoid)
   //   for now, just doing an identity. we'll improve after to learn WHY!
   for (size_t i = 0; i < sample_size; i++) {
-    double x0 = xs[i][0];
+    double x0 = xs[i];
+    // TODO: currently, this is hardcoded to a single neuron.
     double w0 = ws[0];
     double n0 = w0 * x0;
     ys[i] = n0;
@@ -31,12 +39,31 @@ void forward(const double xs[][2], const double ws[], double ys[], const size_t 
   }
 }
 
-void train(const double xs[][2], double ws[], double ys[], const size_t sample_size, const double learning_rate, const size_t epoc) {
+/**
+* Trains the given model's weights given the expected input and outputs.
+*
+* @param xs Input training data.
+* @param expected_ys Expected output training data.
+* @param ws Model weights to train.
+* @param sample_size Size of the training sample dataset.
+* @param learning_rate Learning rate of the model.
+* @param epoc Number of epocs to iterate through training.
+*/
+void train(const double xs[], const double expected_ys[], const size_t sample_size, double ws[] , const double learning_rate, const size_t epoc) {
+  // Temporarily create outputs to store for training.
+  double *ys = new double[sample_size];
+
+  // Initial evaluation.
+  forward(xs, ws, ys, sample_size);
+
+  // Training begins.
   for (size_t j = 0; j < epoc; j++) {
+
+    // WEIGHT ADJUSTMENT
     for (size_t i = 0; i < sample_size; i++) {
       // ky = expected output
       // ka = actual output
-      const double ky = xs[i][1];
+      const double ky = expected_ys[i];
       const double ka = ys[i];
       const double dy = Loss::d_mean_square_error( ky, ka, sample_size  );
       const double dy_lr = dy * learning_rate;
@@ -51,18 +78,26 @@ void train(const double xs[][2], double ws[], double ys[], const size_t sample_s
       ws[0] += dy_lr;
     }
 
+    // EVALUATION
     // Forward through the model and evaluate the performance of the model.
     forward(xs, ws, ys, sample_size);
 
+    // MODEL PERFORMANCE
     // Calculate the score after each epoc.
     double score = Loss::mean_square_error(
-      xs,
-      sample_size,
+      // Evaluating training dataset | expected outputs
+      expected_ys,
+
+      // On actual outputs of the model
       ys,
       sample_size
     );
     spdlog::debug("epoc[{}] score: {:.4}", j, score);
+
   }
+
+  // Clean up.
+  delete[] ys;
 }
 
 // NOTE: phase0 is verbose. learning what's going on.
@@ -76,15 +111,9 @@ void do_ml_stuff(bool& should_close, ImPlotData& implot_data) {
 
   // WIP: get something working first.
   // This bascially should be y = 2x
-  const double TRAIN_DATA_LINEAR_OP[][2] = {
-    // Input | Result
-    {  0.0,      0.0 },
-    {  1.0,      2.0 },
-    {  2.0,      4.0 },
-    {  3.0,      6.0 },
-    {  4.0,      8.0 },
-  };
-  const size_t TRAIN_DATA_SET_SIZE = sizeof(TRAIN_DATA_LINEAR_OP) / sizeof(TRAIN_DATA_LINEAR_OP[0]);
+  const double TRAIN_XS_DATA_LINEAR_OP[] = { 0.0, 1.0, 2.0, 3.0, 4.0 };
+  const double TRAIN_YS_DATA_LINEAR_OP[] = { 0.0, 2.0, 4.0, 6.0, 8.0 };
+  const size_t TRAIN_DATA_SET_SIZE = sizeof(TRAIN_XS_DATA_LINEAR_OP) / sizeof(TRAIN_XS_DATA_LINEAR_OP[0]);
 
   // WIP: Neuron(s) | Neural network
   double ws[] = {
@@ -94,56 +123,38 @@ void do_ml_stuff(bool& should_close, ImPlotData& implot_data) {
   };
   spdlog::info("w = {{ {:.4} }}", ws[0]);
   spdlog::info("learning rate = {:.4}", LEARNING_RATE);
-  spdlog::info("epoc = {:}", TRAIN_EPOC);
+  spdlog::info("epoc = {}", TRAIN_EPOC);
 
-  // Apply weighted sum operation on all training data sets
-  double ys[TRAIN_DATA_SET_SIZE] = {};
+  // TRAIN: Adjust weights to reduce loss function.
+  train(
+    TRAIN_XS_DATA_LINEAR_OP,
+    TRAIN_YS_DATA_LINEAR_OP,
+    TRAIN_DATA_SET_SIZE,
+    ws,
+    LEARNING_RATE,
+    TRAIN_EPOC
+  );
 
-  // Forward inputs through the model.
-  forward(TRAIN_DATA_LINEAR_OP, ws, ys, TRAIN_DATA_SET_SIZE);
+  // Apply weighted sum operation on all training datasets
+  double training_ys[TRAIN_DATA_SET_SIZE] = {};
+  forward(TRAIN_XS_DATA_LINEAR_OP, ws, training_ys, TRAIN_DATA_SET_SIZE);
 
   // Evaluate score, which is using a loss function.
   double score = Loss::mean_square_error(
-    // Evaluating training data set | expected outputs
-    TRAIN_DATA_LINEAR_OP,
-    TRAIN_DATA_SET_SIZE,
+    // Evaluating training dataset | expected outputs
+    TRAIN_YS_DATA_LINEAR_OP,
 
     // On actual output of the model
-    ys,
+    training_ys,
     TRAIN_DATA_SET_SIZE
   );
   spdlog::info("score = {:.4}", score);
-
-  // TRAIN: Adjust weights to reduce loss function.
-  train( TRAIN_DATA_LINEAR_OP, ws, ys, TRAIN_DATA_SET_SIZE, LEARNING_RATE, TRAIN_EPOC );
-
-  // EVALUATE
-  // Forward through the model and evaluate the performance of the model.
-  forward(TRAIN_DATA_LINEAR_OP, ws, ys, TRAIN_DATA_SET_SIZE);
-
-  // Calculate the score after each epoc.
-  score = Loss::mean_square_error(
-    TRAIN_DATA_LINEAR_OP,
-    TRAIN_DATA_SET_SIZE,
-    ys,
-    TRAIN_DATA_SET_SIZE
-  );
-  spdlog::info("epoc[{}] score: {:.4}", TRAIN_EPOC, score);
-
-  // TODO: graph it. then after that we can play around with activation functions.
-  // TEST:
   return;
 
-  // Insert initial empty set of data.
+  // Insert initial empty set of data and
+  // grab a reference to the data arrays for dynamic mutation.
   // implot_data.bars.emplace_back("Bar Data");
   // implot_data.lines.emplace_back("Line Data");
-  // implot_data.points.emplace_back("Point Data");
-  //
-  // Grab a reference to the data arrays for dynamic mutation.
-  // TODO:
-
-
-
 
   // Mutate the data plots.
   while (!should_close) {

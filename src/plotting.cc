@@ -32,7 +32,7 @@ void draw_implot(const char* plot_name, ImPlotData& implot_data) {
   ImGui::Begin(
     fmt::format("Fullscreen {}", plot_name).c_str(),
     nullptr,
-    ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoMove |
+    ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove |
     ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize
   );
 

@@ -14,8 +14,11 @@ export TIMEFMT='%J   %U  user %S system %P cpu %*E total'$'\n'\
 'other page faults:         %R'
 
 # Check
-echo -e "\033[35m== Running checks ==\033[0m"
-$CUR_DIR/check.sh $CUR_DIR/../src
+# TODO: disabled due to checking vendors directory. once excluded, this
+# can be re-enabled.
+#
+# echo -e "\033[35m== Running checks ==\033[0m"
+# $CUR_DIR/check.sh
 
 # Build
 $CUR_DIR/build.sh

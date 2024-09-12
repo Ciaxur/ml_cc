@@ -1,8 +1,11 @@
 #/usr/bin/env bash
-CUR_DIR="$(dirname $0)"
+PROJECT_DIR="$(realpath $(dirname $0)/..)"
+cd $PROJECT_DIR
 
 cppcheck \
-  -I $CUR_DIR \
+  -I ./includes \
+  -I ./vendors/spdlog/include \
+  -I ./ \
   --error-exitcode=1 \
   --enable=all \
   --suppress=missingIncludeSystem \
@@ -12,5 +15,5 @@ cppcheck \
   --language=c++ \
   --check-level=exhaustive \
   --std=c++20 \
-  "$@" || exit 1
+  ./src || exit 1
 
