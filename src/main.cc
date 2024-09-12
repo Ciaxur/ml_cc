@@ -4,6 +4,7 @@
 #include <backends/imgui_impl_opengl3.h>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <functional>
 #include <imgui.h>
 #include <implot.h>
@@ -13,6 +14,20 @@
 
 #include "includes/plotting.h"
 #include "includes/loss.h"
+
+template<typename T>
+std::string array_to_str(const T vec[], const size_t size) {
+  std::string str;
+
+  str += fmt::format("[ ");
+  for (size_t i = 0; i < size; i++) {
+    const std::string separator = i + 1 == size ? " " : ", ";
+    str += fmt::format("{}{}", vec[i], separator);
+  }
+  str += "]";
+
+  return str;
+}
 
 /**
 * Forwards the given input through the model, populating outputs.
@@ -116,11 +131,13 @@ void do_ml_stuff(bool& should_close, ImPlotData& implot_data) {
   const size_t TRAIN_DATA_SET_SIZE = sizeof(TRAIN_XS_DATA_LINEAR_OP) / sizeof(TRAIN_XS_DATA_LINEAR_OP[0]);
 
   // WIP: Neuron(s) | Neural network
-  double ws[] = {
+  const size_t w_size = 1;
+  double ws[w_size] = {
     // Randomly populate this neuron's weights.
     // These weights must match each input.
     implot_data.rand_double(),
   };
+  spdlog::info("======= Model =======");
   spdlog::info("w = {{ {:.4} }}", ws[0]);
   spdlog::info("learning rate = {:.4}", LEARNING_RATE);
   spdlog::info("epoc = {}", TRAIN_EPOC);
@@ -149,12 +166,29 @@ void do_ml_stuff(bool& should_close, ImPlotData& implot_data) {
     TRAIN_DATA_SET_SIZE
   );
   spdlog::info("score = {:.4}", score);
-  return;
 
   // Insert initial empty set of data and
   // grab a reference to the data arrays for dynamic mutation.
   // implot_data.bars.emplace_back("Bar Data");
   // implot_data.lines.emplace_back("Line Data");
+  ImPlotData::ScatterData &points = implot_data.points.emplace_back("Point Data");
+
+  // Generate data from x 0 -> 9.
+  const size_t data_size = 10;
+  double xs[data_size]   = {0};
+  double ys[data_size]   = {0};
+  for (size_t i = 0; i < data_size; i++) xs[i] = i;
+
+  // Apply model on the data.
+  forward(xs, ws, ys, data_size);
+  spdlog::info("Sample size: {} ", data_size);
+  spdlog::info("Inputs:      {} ", array_to_str(xs, data_size));
+  spdlog::info("Weights:     {} ", array_to_str(ws, w_size));
+  spdlog::info("Outputs:     {} ", array_to_str(ys, data_size));
+
+  // Populate data into plot.
+  points.data.resize(data_size);
+  for (size_t i = 0; i < data_size; i++) points.data[i] = ys[i];
 
   // Mutate the data plots.
   while (!should_close) {
@@ -184,13 +218,6 @@ void configure_loglevel() {
 
 int main() {
   configure_loglevel();
-
-  // TEST:
-  ImPlotData implot_data_1;
-  bool b = true;
-  do_ml_stuff(b, implot_data_1);
-  return 69;
-
 
   // Initialize GLFW
   glfwInit();
