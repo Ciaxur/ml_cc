@@ -167,28 +167,49 @@ void do_ml_stuff(bool& should_close, ImPlotData& implot_data) {
   );
   spdlog::info("score = {:.4}", score);
 
-  // Insert initial empty set of data and
-  // grab a reference to the data arrays for dynamic mutation.
+  // Insert initial empty set of data.
+  //
   // implot_data.bars.emplace_back("Bar Data");
-  // implot_data.lines.emplace_back("Line Data");
-  ImPlotData::ScatterData &points = implot_data.points.emplace_back("Point Data");
+  implot_data.lines.emplace_back("Model function");
+  implot_data.points.emplace_back("training xs");
+  implot_data.points.emplace_back("actual xs");
 
-  // Generate data from x 0 -> 9.
-  const size_t data_size = 10;
-  double xs[data_size]   = {0};
-  double ys[data_size]   = {0};
-  for (size_t i = 0; i < data_size; i++) xs[i] = i;
+  // Grab references to data in the array.
+  ImPlotData::ScatterData &training_xs_points = implot_data.points[0];
+  ImPlotData::ScatterData &xs_points          = implot_data.points[1];
+  ImPlotData::LineData &model_lines           = implot_data.lines[0];
+
+  // Generate data.
+  const size_t data_sample_size = 10;
+  double xs[data_sample_size]   = {0};
+  double ys[data_sample_size]   = {0};
+  for (size_t i = 0; i < data_sample_size; i++) xs[i] = i;
+
+  // Populate training data.
+  training_xs_points.data.resize(TRAIN_DATA_SET_SIZE);
+  for (size_t i = 0; i < TRAIN_DATA_SET_SIZE; i++) {
+    training_xs_points.data[i] = TRAIN_YS_DATA_LINEAR_OP[i];
+  }
 
   // Apply model on the data.
-  forward(xs, ws, ys, data_size);
-  spdlog::info("Sample size: {} ", data_size);
-  spdlog::info("Inputs:      {} ", array_to_str(xs, data_size));
+  forward(xs, ws, ys, data_sample_size);
+  spdlog::info("Sample size: {} ", data_sample_size);
+  spdlog::info("Inputs:      {} ", array_to_str(xs, data_sample_size));
   spdlog::info("Weights:     {} ", array_to_str(ws, w_size));
-  spdlog::info("Outputs:     {} ", array_to_str(ys, data_size));
+  spdlog::info("Outputs:     {} ", array_to_str(ys, data_sample_size));
+
+  // Pre-allocate space for data to plot.
+  xs_points.data.resize(data_sample_size);
+  model_lines.x_data.resize(data_sample_size);
+  model_lines.y_data.resize(data_sample_size);
+  model_lines.size = data_sample_size;
 
   // Populate data into plot.
-  points.data.resize(data_size);
-  for (size_t i = 0; i < data_size; i++) points.data[i] = ys[i];
+  for (size_t i = 0; i < data_sample_size; i++) {
+    model_lines.x_data[i] = xs[i];
+    model_lines.y_data[i] = ys[i];
+    xs_points.data[i] = ys[i];
+  }
 
   // Mutate the data plots.
   while (!should_close) {
