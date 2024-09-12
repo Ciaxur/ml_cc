@@ -9,6 +9,7 @@
 #include <imgui.h>
 #include <implot.h>
 #include <spdlog/spdlog.h>
+#include "includes/model.h"
 #include "spdlog/details/os.h"
 #include <thread>
 
@@ -117,12 +118,19 @@ void train(const double xs[], const double expected_ys[], const size_t sample_si
 
 // NOTE: phase0 is verbose. learning what's going on.
 // TODO: later.
-// WIP: Training data: Bitwise operations
-//
 void do_ml_stuff(bool& should_close, ImPlotData& implot_data) {
-  // Knobs.
-  const double LEARNING_RATE = std::exp(-6);
-  const size_t TRAIN_EPOC = 1000;
+  Model model{
+    .learning_rate = std::exp(-6),
+    .training_epochs = 10,
+    .cost = 69,
+
+    // Single neuron.
+    .n = { 1 },
+  };
+
+  // Add model to ImPlot's shared data.
+  implot_data.model = &model;
+
 
   // WIP: get something working first.
   // This bascially should be y = 2x
@@ -130,31 +138,21 @@ void do_ml_stuff(bool& should_close, ImPlotData& implot_data) {
   const double TRAIN_YS_DATA_LINEAR_OP[] = { 0.0, 2.0, 4.0, 6.0, 8.0 };
   const size_t TRAIN_DATA_SET_SIZE = sizeof(TRAIN_XS_DATA_LINEAR_OP) / sizeof(TRAIN_XS_DATA_LINEAR_OP[0]);
 
-  // WIP: Neuron(s) | Neural network
-  const size_t w_size = 1;
-  double ws[w_size] = {
-    // Randomly populate this neuron's weights.
-    // These weights must match each input.
-    implot_data.rand_double(),
-  };
-  spdlog::info("======= Model =======");
-  spdlog::info("w = {{ {:.4} }}", ws[0]);
-  spdlog::info("learning rate = {:.4}", LEARNING_RATE);
-  spdlog::info("epoc = {}", TRAIN_EPOC);
+  // Neuron(s) | Neural network
+  // Randomly populate this neuron's weights.
+  // These weights must match each input.
+  for (size_t i = 0; i < model.n.size(); i++) {
+    model.n.weights[i] = implot_data.rand_double();
+  }
 
-  // TRAIN: Adjust weights to reduce loss function.
-  train(
-    TRAIN_XS_DATA_LINEAR_OP,
-    TRAIN_YS_DATA_LINEAR_OP,
-    TRAIN_DATA_SET_SIZE,
-    ws,
-    LEARNING_RATE,
-    TRAIN_EPOC
-  );
+  spdlog::info("======= Model =======");
+  spdlog::info("w = {{ {:.4} }}", model.n.weights[0]);
+  spdlog::info("learning rate = {:.4}", model.learning_rate);
+  spdlog::info("epoch = {}", model.training_epochs);
 
   // Apply weighted sum operation on all training datasets
   double training_ys[TRAIN_DATA_SET_SIZE] = {};
-  forward(TRAIN_XS_DATA_LINEAR_OP, ws, training_ys, TRAIN_DATA_SET_SIZE);
+  forward(TRAIN_XS_DATA_LINEAR_OP, model.n.weights, training_ys, TRAIN_DATA_SET_SIZE);
 
   // Evaluate score, which is using a loss function.
   double score = Loss::mean_square_error(
@@ -192,10 +190,10 @@ void do_ml_stuff(bool& should_close, ImPlotData& implot_data) {
   }
 
   // Apply model on the data.
-  forward(xs, ws, ys, data_sample_size);
+  forward(xs, model.n.weights, ys, data_sample_size);
   spdlog::info("Sample size: {} ", data_sample_size);
   spdlog::info("Inputs:      {} ", array_to_str(xs, data_sample_size));
-  spdlog::info("Weights:     {} ", array_to_str(ws, w_size));
+  spdlog::info("Weights:     {} ", array_to_str(model.n.weights, model.n.size()));
   spdlog::info("Outputs:     {} ", array_to_str(ys, data_sample_size));
 
   // Pre-allocate space for data to plot.
@@ -214,6 +212,38 @@ void do_ml_stuff(bool& should_close, ImPlotData& implot_data) {
   // Mutate the data plots.
   while (!should_close) {
     std::this_thread::sleep_for( std::chrono::milliseconds(50) );
+
+    // TRAIN: Adjust weights to reduce loss function and improve the accuracy of
+    // the model.
+    train(
+      TRAIN_XS_DATA_LINEAR_OP,
+      TRAIN_YS_DATA_LINEAR_OP,
+      TRAIN_DATA_SET_SIZE,
+      model.n.weights,
+      model.learning_rate,
+      model.training_epochs
+    );
+
+    // Forward data through the model.
+    forward(xs, model.n.weights, ys, data_sample_size);
+
+    // Populate data into plot.
+    for (size_t i = 0; i < data_sample_size; i++) {
+      model_lines.x_data[i] = xs[i];
+      model_lines.y_data[i] = ys[i];
+      xs_points.data[i] = ys[i];
+    }
+
+    // Evaluate model's performance.
+    model.cost = Loss::mean_square_error(
+      // Evaluating training dataset | expected outputs
+      TRAIN_YS_DATA_LINEAR_OP,
+
+      // On actual output of the model
+      ys,
+      TRAIN_DATA_SET_SIZE
+    );
+
   }
 }
 

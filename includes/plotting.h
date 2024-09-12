@@ -1,6 +1,7 @@
 #pragma once
 
 #include <random>
+#include "includes/model.h"
 
 /**
 * Helper function for creating a new ImGui frame for OpenGL.
@@ -17,6 +18,9 @@ struct ImPlotData {
   // Random number generator.
   std::mt19937 rand_gen;
   std::uniform_real_distribution<double> rand_uniform;
+
+  // Model metadata.
+  Model const *model = nullptr;
 
   // Data types.
   struct BarsData {
@@ -35,7 +39,6 @@ struct ImPlotData {
     const char* name;
     std::vector<double> data;
   };
-
 
   // Data to draw.
   std::vector<BarsData> bars;
