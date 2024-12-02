@@ -1,0 +1,66 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{inconsolata}
+
+\begin{document}
+
+\section{Artificial Neuron}
+
+\subsection{Neuron Forwarding: Weighted Sum}
+\begin{flushleft}
+  An artificial neuron is the basic building block for a neural network. It
+  basically gets \texttt{N inputs}, applies \texttt{weights} to the
+  \texttt{inputs}, and sums them to produce an \texttt{output}. This is called
+  the \textbf{weighted sum}.
+\end{flushleft}
+
+\begin{flushleft}
+  Weighted sum is the sum of all weights associated with a neuron \textbf{k}
+  multiplied by the inputs \textbf{x}.
+\end{flushleft}
+
+\begin{equation}
+  \begin{align}
+    y_k = \sum_{i=0}^{n}{ \bigg( w_{ki} x_i \bigg) }
+  \end{align}
+\end{equation}
+
+\begin{flushleft}
+  There's also the idea of \textbf{bias}, which is added to the result of the
+  \textbf{inputs} such that it shifts the function towards the training data.
+\end{flushleft}
+
+\begin{equation}
+  \begin{align}
+    y_k = \sum_{i=0}^{n}{ \bigg( w_{ki} x_i + b \bigg) }
+  \end{align}
+\end{equation}
+
+
+\subsection{Loss/Cost Function: Mean Squared Error}
+\begin{equation}
+  \begin{align}
+    ya & = \text{Actual output} \\
+    yk & = \text{Predicted output} \\
+    n  & = \text{Sample size}
+  \end{align}
+\end{equation}
+
+\begin{align}
+  C = \frac{1}{n} \sum_{i=0}^{n}{ \bigg( ya_{i} - yk_{i} \bigg) }
+\end{align}
+
+
+\subsection{Training: Driving cost to zero}
+\begin{flushleft}
+  TBD:
+\end{flushleft}
+
+\subsection{Activation function: Sigmoid}
+\begin{flushleft}
+  TBD:
+\end{flushleft}
+
+
+\end{document}

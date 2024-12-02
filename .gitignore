@@ -3,3 +3,7 @@
 app
 compile_commands.*
 imgui.ini
+
+*.aux
+*.log
+*.pdf
